@@ -5,13 +5,13 @@ ARG DEBIANFRONTEND=noninteractive
 
 USER root
 
-ARG user=jenkins
-ARG group=jenkins
+ARG user=jenkinsagent
+ARG group=jenkinsagent
 ARG uid=1000
 ARG gid=1000
 
 RUN groupadd -g ${gid} ${group}
-RUN useradd -c "Jenkins user" -d /home/${user} -u ${uid} -g ${gid} -m ${user}
+RUN useradd -c "Jenkins user" -d /var/${user} -u ${uid} -g ${gid} -m ${user}
 
 RUN apt-get update && \
 	# To get latest version of git
@@ -30,6 +30,7 @@ RUN apt-get update && \
 	# Required to run Docker in Docker
 	iptables \
 	xz-utils \
+    rsync \
 	btrfs-progs
 
 # Because of jenkins/slave
@@ -55,7 +56,7 @@ RUN wget -O /usr/local/bin/dind "https://raw.githubusercontent.com/docker/docker
 
 VOLUME /var/lib/docker
 
-ARG AGENT_WORKDIR=/home/${user}/agent
+ARG AGENT_WORKDIR=/var/${user}/agent
 
 RUN REMOTING_URL="https://repo.jenkins-ci.org/public/org/jenkins-ci/main/remoting" && \
 	VERSION=$(curl -fsS ${REMOTING_URL}/maven-metadata.xml | grep "<latest>.*</latest>" | sed -e "s#\(.*\)\(<latest>\)\(.*\)\(</latest>\)\(.*\)#\3#g") && \
@@ -66,11 +67,12 @@ RUN REMOTING_URL="https://repo.jenkins-ci.org/public/org/jenkins-ci/main/remotin
 
 USER ${user}
 ENV AGENT_WORKDIR=${AGENT_WORKDIR}
-RUN mkdir /home/${user}/.jenkins && mkdir -p ${AGENT_WORKDIR}
+RUN mkdir /var/${user}/.jenkins && mkdir /var/${user}/.docker && mkdir -p ${AGENT_WORKDIR}
+COPY dockerconfig.json /var/${user}/.docker/config.json
 
-VOLUME /home/${user}/.jenkins
+VOLUME /var/${user}/.jenkins
 VOLUME ${AGENT_WORKDIR}
-WORKDIR /home/${user}
+WORKDIR /var/${user}
 
 USER root
 
